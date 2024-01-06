@@ -8,6 +8,7 @@ import sys
 import json
 import numpy as np
 
+
 def read_input_data(file_path):
     with open(file_path, 'r') as file:
         return json.load(file)
@@ -23,7 +24,7 @@ def calculate_shortest_path_and_cost(data):
     path = []
     cost = 0
 
-    def travelling_salesman(src):
+    def travelling_salesman(src, flag):
         nonlocal cost
         nonlocal path
         nonlocal answer
@@ -33,7 +34,11 @@ def calculate_shortest_path_and_cost(data):
         min_val = sys.maxsize
 
         visited[src] = 1
-        path.append((src + 1))
+        
+        
+        if flag != 0:
+            path.append((src + 1))
+        flag = 1
 
         for k in range(20):
             if (answer[src][k] != 0) and (visited[k] == 0) and answer[src][k] < min_val:
@@ -49,13 +54,14 @@ def calculate_shortest_path_and_cost(data):
             cost = cost + answer[src][adjV]
             return
 
-        travelling_salesman(adjV)
+        travelling_salesman(adjV, flag)
 
-    travelling_salesman(0)
+    travelling_salesman(0, 0)
     return path, cost
 
 def generate_output_json(path):
     path_ = ['r0']
+    path_ = []
     for i in path:
         path_.append('n'+str(i-1))
     path_.append('r0')
@@ -74,6 +80,4 @@ def main():
 
 if __name__ == "__main__":
     main()
-
 # ----------------------------------------------------------
-
