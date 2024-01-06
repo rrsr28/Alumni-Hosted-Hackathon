@@ -8,119 +8,102 @@ import sys
 import json
 import numpy as np
 
+output = []
 
-"""def read_input_data(file_path):
-    with open(file_path, 'r') as file:
-        return json.load(file)
+def travelling_salesman(c):
 
-def calculate_shortest_path_and_cost(data):
-    graph = [[0 for _ in range(20)] for _ in range(20)]
-    for i in range(1, 20):
-        graph[i] = data["neighbourhoods"]["n" + str(i)]["distances"]
-    graph[0] = data["restaurants"]["r0"]["neighbourhood_distance"]
+    global cost
 
-    visited = np.zeros(20)
-    answer = np.array(graph)
-    path = []
-    cost = 0
+    adj_vertex = sys.maxsize
+    min_val = sys.maxsize
 
-    def travelling_salesman(src, flag):
-        nonlocal cost
-        nonlocal path
-        nonlocal answer
-        nonlocal visited
+    visited[c] = 1
+    output.append(c+1)
 
-        adjV = sys.maxsize
-        min_val = sys.maxsize
+    print((c + 1), end=" ")
 
-        visited[src] = 1
-        
-        
-        if flag != 0:
-            path.append((src + 1))
-        flag = 1
+    for k in range(21):
+        if (graph[c][k] != 0) and (visited[k] == 0):
+            if graph[c][k] < min_val:
+                min_val = graph[c][k]
+                adj_vertex = k
 
-        for k in range(20):
-            if (answer[src][k] != 0) and (visited[k] == 0) and answer[src][k] < min_val:
-                min_val = answer[src][k]
-                adjV = k
+    if min_val != sys.maxsize:
+        cost = cost + min_val
 
-        if min_val != sys.maxsize:
-            cost = cost + min_val
+    if adj_vertex == sys.maxsize:
+        adj_vertex = 0
+        output.append(adj_vertex + 1)
+        print((adj_vertex + 1), end=" ")
+        cost = cost + graph[c][adj_vertex]
+        return
+    
+    travelling_salesman(adj_vertex)
 
-        if adjV == sys.maxsize:
-            adjV = 0
-            path.append(adjV + 1)
-            cost = cost + answer[src][adjV]
-            return
-
-        travelling_salesman(adjV, flag)
-
-    travelling_salesman(0, 0)
-    return path, cost
-
-def generate_output_json(path):
-    path_ = ['r0']
-    path_ = []
-    for i in path:
-        path_.append('n'+str(i-1))
-    path_.append('r0')
-    dictionary = {"v0": {"path": path_}}
-    json_object = json.dumps(dictionary, indent=4)
-    with open("level0_output.json", "w") as outfile:
-        outfile.write(json_object)
-
-def main():
-    file_path = 'Input data/level0.json'
-    data = read_input_data(file_path)
-    path, cost = calculate_shortest_path_and_cost(data)
-    print("\nShortest Path : ", path)
-    print("Minimum Cost : ", cost)
-    generate_output_json(path)
-
-if __name__ == "__main__":
-    main()"""
-# ----------------------------------------------------------
-
-from typing import List
-import math
-
-def nearest_neighbor(cities, graph):
-    unvisited = cities.copy()
-    print(unvisited)
-    current = cities[0]
-    unvisited.remove(current)
-    tour = [current]
-    while unvisited:
-        next_city = min(unvisited, key=lambda city: graph[cities.index(current)][cities.index(city)])
-        tour.append(next_city)
-        unvisited.remove(next_city)
-        current = next_city
-    return tour
-
-file_path = 'Input data/level0.json'
-
-with open(file_path, 'r') as file:
-    data = json.load(file)
 
 cost = 0
+visited = np.zeros(21)
+graph = []
 
+json_file_path = 'Input data\level0.json'
 
-graph = [[0 for _ in range(21)] for _ in range(21)]
+with open(json_file_path, 'r') as file:
+    data = json.load(file)
 
+names = ['n0', 'n1', 'n2', 'n3', 'n4', 'n5', 'n6', 'n7', 'n8', 'n9', 'n10', 'n11', 'n12', 'n13', 'n14', 'n15', 'n16', 'n17', 'n18', 'n19']
+r = data['restaurants']['r0']['neighbourhood_distance']
+
+for i in range(len(names)+1):
+    graph.append([0])
+
+for i in range(len(r)):
+    graph[0].append(r[i])
+for i in range(1, len(names)+1):
+    d = data['neighbourhoods'][names[i-1]]['distances']
+    for j in d:
+        graph[i].append(j)
 for i in range(1, 21):
-    graph[i] = data["neighbourhoods"]["n" + str(i-1)]["distances"]
-graph[0] = data["restaurants"]["r0"]["neighbourhood_distance"]
+    graph[i][0] = r[i-1]
 
-cities = ["r0"] + ["n" + str(i) for i in range(20)]
-print(cities)
-path_ = nearest_neighbor(cities, graph)
-print(path_)
+graph = np.array(graph)
 
-for i in path_:
-    path_.append('n'+str(i-1))
-path_.append('r0')
-dictionary = {"v0": {"path": path_}}
-json_object = json.dumps(dictionary, indent=4)
-with open("level0_output.json", "w") as outfile:
-    outfile.write(json_object)
+print("\nShortest Path : ")
+travelling_salesman(0)
+print("\nMinimum Cost : ", cost)
+
+
+output_dict = {'v0': {'path': {}}}
+mapping = {1: 'r0', 
+           2: 'n0',
+           3: 'n1',
+           4: 'n2',
+           5: 'n3',
+           6: 'n4',
+           7: 'n5',
+           8: 'n6',
+           9: 'n7',
+           10: 'n8',
+           11: 'n9',
+           12: 'n10',
+           13: 'n11',
+           14: 'n12',
+           15: 'n13',
+           16: 'n14',
+           17: 'n15',
+           18: 'n16',
+           19: 'n17',
+           20: 'n18',
+           21 : 'n19'}
+
+path_list = []
+
+for i in range(len(output)):
+    path_list.append(mapping[output[i]])
+
+output_dict['v0']['path'] = path_list
+
+json_file_path = 'MyOutput\level0_output.json'
+
+with open(json_file_path, 'w') as json_file:
+    json.dump(output_dict, json_file, indent=2)
+# ----------------------------------------------------------
