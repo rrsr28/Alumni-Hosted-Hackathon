@@ -1,84 +1,85 @@
-# Alumni Hosted Hackathon 2024
-# Author - Sanjay Ram R R (21PD32)
-
-# Import statements
-# ----------------
-
+import heapq
 import json
-from ortools.linear_solver import pywraplp
+import numpy as np
+from python_tsp.exact import solve_tsp_dynamic_programming
 
-def find_optimized_slots(distances, res_dist, ord_quantities, max_capacities, num_scooters):
-    solver = pywraplp.Solver.CreateSolver('SCIP')
-    num_nodes = len(res_dist)
-    num_vehicles = len(max_capacities)
+def optimize_delivery_slots(orders, scooter_capacity):
+    orders.sort(key=lambda x: x['quantity'], reverse=True)
 
-    x = {}
-    for i in range(num_nodes):
-        for j in range(num_nodes):
-            x[i, j] = solver.BoolVar('x[%i,%i]' % (i, j))
+    delivery_slots = []
+    total_distance = 0
+    path_locations = []
 
-    u = [solver.IntVar(0, num_nodes - 1, 'u[%i]' % i) for i in range(num_nodes)]
+    for order in orders:
+        quantity = order['quantity']
+        location = order['location']
 
-    for i in range(num_nodes):
-        solver.Add(solver.Sum([x[i, j] for j in range(num_nodes)]) == 1)
-        solver.Add(solver.Sum([x[j, i] for j in range(num_nodes)]) == 1)
+        if delivery_slots and delivery_slots[0][0] + quantity <= scooter_capacity:
+            current_slot = heapq.heappop(delivery_slots)
+            current_slot[0] += quantity
+            current_slot[1].append(location)  # Append location to the path
+            heapq.heappush(delivery_slots, current_slot)
+        else:
+            heapq.heappush(delivery_slots, [quantity, [location]])  # Start a new delivery slot
 
-    for i in range(1, num_nodes):
-        for j in range(1, num_nodes):
-            if i != j:
-                solver.Add(u[i] - u[j] + num_nodes * x[i, j] <= num_nodes - 1)
+    # Extract locations from each path
+    for slot in delivery_slots:
+        path_locations.append(slot[1])
 
-    objective = solver.Objective()
-    for i in range(num_nodes):
-        for j in range(num_nodes):
-            if i != j:
-                objective.SetCoefficient(x[i, j], distances[i][j])
+    return path_locations, total_distance, delivery_slots
 
-    objective.SetMinimization()
+def main():
+    json_file_path = 'Input data\level1b.json'
+    with open(json_file_path, 'r') as file:
+        data = json.load(file)
 
-    solver.Solve()
+    name = ['n' + str(i) for i in range(50)]
+    orders = [{'quantity': data['neighbourhoods'][name[i]]['order_quantity'], 'location': i} for i in range(len(name))]
+    scooter_capacities = [250, 350, 350, 250, 300]
 
-    slots = [[] for _ in range(num_vehicles)]
-    vehicle_deliveries = [0] * num_vehicles  # Track the deliveries for each vehicle
+    all_optimized_paths = []
+    all_total_distances = []
+    all_slots = []
 
-    for i in range(num_nodes):
-        for j in range(num_nodes):
-            if x[i, j].solution_value() == 1:
-                vehicle_index = i % num_vehicles
-                if vehicle_deliveries[vehicle_index] < max_capacities[vehicle_index]:
-                    slots[vehicle_index].append((i, j))
-                    vehicle_deliveries[vehicle_index] += ord_quantities[j]
+    for scooter_capacity in scooter_capacities:
+        optimized_paths, total_distance, slots = optimize_delivery_slots(orders, scooter_capacity)
+        all_optimized_paths.append(optimized_paths)
+        all_total_distances.append(total_distance)
+        all_slots.append(slots)
 
-    return slots
+    tsp_g = [[0] + [data['restaurants']['r0']['neighbourhood_distance'][i] for i in range(50)]]
+    for i in range(1, 51):
+        d = data['neighbourhoods'][name[i-1]]['distances']
+        tsp_g.append([data['restaurants']['r0']['neighbourhood_distance'][i-1]] + [d[j] for j in range(50)])
 
-# Load input data from level2a.json
-with open('Input data/level2a.json') as file:
-    data = json.load(file)
+    slo = []
+    for i in range(len(all_slots)):
+        for j in all_optimized_paths[i]:
+            temp = []
+            for loc in range(len(j)):
+                s = []
+                for loc_1 in range(len(j)):
+                    s.append(tsp_g[j[loc]+1][j[loc_1]+1])
+                temp.append(s)
+            slo.append(np.array(temp))
 
-distance = []
-neighbourhood = data['neighbourhoods']
-ord_quantity = [list(neighbourhood[i].values())[0] for i in neighbourhood]
-for i in neighbourhood.keys():
-    temp = list(neighbourhood[i].values())
-    ord_quantity.append(temp[0])
-    distance.append(temp[1])
-res_dist = data['restaurants']['r0']['neighbourhood_distance']
-num_scooters = 5  # Define num_scooters here
-max_capacities = [data['vehicles'][f'v{i}']['capacity'] for i in range(num_scooters)]
+    min_slot_dis = []
+    for i in range(len(slo)):
+        permutation, distance = solve_tsp_dynamic_programming(slo[i])
+        min_slot_dis.append([permutation, distance])
 
-num_scooters = len(max_capacities)
+    m = {-1: 'r0', **{i: f'n{i}' for i in range(50)}}
 
-optimized_slots = find_optimized_slots(distance, res_dist, ord_quantity, max_capacities, num_scooters)
+    d = {}
+    for i in range(len(min_slot_dis)):
+        w = [m[all_optimized_paths[i][j]] for j in min_slot_dis[i][0]]
+        w.append('r0')
+        st = 'path' + str(i+1)
+        d[f'v{i}'] = {st: w}
 
-final_lst = []
-for i in optimized_slots:
-    temp = ['r0']
-    temp.extend(['n' + str(j[0]) for j in i])
-    temp.append('r0')
-    final_lst.append(temp)
+    json_file_path = 'MyOutput\level1b_output.json'
+    with open(json_file_path, 'w') as json_file:
+        json.dump(d, json_file, indent=2)
 
-final_slots = {"v" + str(i): {f"path{j + 1}": final_lst[j] for j in range(len(final_lst))} for i in range(num_scooters)}
-
-output_file_path = "MyOutput/level2a_output.json"
-with open(output_file_path, "w") as save_file:
-    json.dump(final_slots, save_file, indent=6)
+if __name__ == "__main__":
+    main()
