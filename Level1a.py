@@ -1,11 +1,11 @@
 # Alumni Hosted Hackathon 2024
 # Author - Sanjay Ram R R (21PD32)
 
-import json
-import itertools
-
 # Import statements
 # ----------------
+
+import json
+import itertools
 
 file_path = 'Input data\\level1a.json'
 with open(file_path) as file:
