@@ -103,13 +103,13 @@ file_path = 'Input data/level0.json'
 with open(file_path, 'r') as file:
     data = json.load(file)
 
-path = []
 cost = 0
 
-graph = [[0 for column in range(21)]
-                      for row in range(21)]
-for i in range(0, 20):
-    graph[i+1] = data["neighbourhoods"]["n" + str(i)]["distances"]
+
+graph = [[0 for _ in range(21)] for _ in range(21)]
+
+for i in range(1, 21):
+    graph[i] = data["neighbourhoods"]["n" + str(i-1)]["distances"]
 graph[0] = data["restaurants"]["r0"]["neighbourhood_distance"]
 
 cities = ["r0"] + ["n" + str(i) for i in range(20)]
@@ -117,7 +117,7 @@ print(cities)
 path_ = nearest_neighbor(cities, graph)
 print(path_)
 
-for i in path:
+for i in path_:
     path_.append('n'+str(i-1))
 path_.append('r0')
 dictionary = {"v0": {"path": path_}}
