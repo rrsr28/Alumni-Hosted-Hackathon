@@ -6,6 +6,7 @@
 
 import sys
 import json
+import numpy as np
 from itertools import permutations
 
 file_path = 'Input data/level0.json'
@@ -13,18 +14,10 @@ file_path = 'Input data/level0.json'
 with open(file_path, 'r') as file:
     data = json.load(file)
 
-"""def save_neighborhood_graph(input_file):
-    with open(input_file, 'r') as file:
-        data = json.load(file)
-        neighborhoods = data["neighbourhoods"]
-        graph = {}
-        for key, value in neighborhoods.items():
-            distances = value["distances"]
-            graph[key] = {neighborhoods[i]: distances[i] for i in range(len(distances))}
-    return graph"""
+# Old Code (Dijkstras)
+# -------------------
 
-
-class Graph():
+"""class Graph():
  
     def __init__(self, vertices):
         self.V = vertices
@@ -36,48 +29,32 @@ class Graph():
         for node in range(self.V):
             print(node, "\t", dist[node])
  
-    # A utility function to find the vertex with
-    # minimum distance value, from the set of vertices
-    # not yet included in shortest path tree
     def minDistance(self, dist, sptSet):
  
-        # Initialize minimum distance for next node
         min = sys.maxsize
-        first = 0
-        # Search not nearest vertex not in the
-        # shortest path tree
+
         for u in range(self.V):
-            if dist[u] < min and sptSet[u] == False and u != self.V:
+            if dist[u] < min and sptSet[u] == False:
                 min = dist[u]
                 min_index = u
-            first = 1
  
         return min_index
- 
-    # Function that implements Dijkstra's single source
-    # shortest path algorithm for a graph represented
-    # using adjacency matrix representation
+
     def dijkstra(self, src):
  
         dist = [sys.maxsize] * self.V
         dist[src] = 0
         sptSet = [False] * self.V
- 
+        #sptSet[src] = True
+        flag = 0
         for cout in range(self.V):
- 
-            # Pick the minimum distance vertex from
-            # the set of vertices not yet processed.
-            # x is always equal to src in first iteration
             x = self.minDistance(dist, sptSet)
- 
-            # Put the minimum distance vertex in the
-            # shortest path tree
+
+            if flag == 0:
+                sptSet[src] = False
+                flag = 1
             sptSet[x] = True
  
-            # Update dist value of the adjacent vertices
-            # of the picked vertex only if the current
-            # distance is greater than new distance and
-            # the vertex in not in the shortest path tree
             for y in range(self.V):
                 if self.graph[x][y] > 0 and sptSet[y] == False and \
                         dist[y] > dist[x] + self.graph[x][y]:
@@ -103,13 +80,66 @@ class Graph():
 
 
 
-g = Graph(20)
-	
-for i in range(1, 20):
-    g.graph[i] = data["neighbourhoods"]["n" + str(i)]["distances"]
-    g.graph[i][i] = -1
-g.graph[0] = data["restaurants"]["r0"]["neighbourhood_distance"]
-g.graph[0][0] = -1
+g = Graph(20)"""
 
-print(g.V)
-g.dijkstra(0)
+# ----------------------------------------------------------
+# New and Working Code
+# -------------------
+
+path = []
+cost = 0
+
+graph = [[0 for column in range(20)]
+                      for row in range(20)]
+for i in range(1, 20):
+    graph[i] = data["neighbourhoods"]["n" + str(i)]["distances"]
+graph[0] = data["restaurants"]["r0"]["neighbourhood_distance"]
+
+def travellingsalesman(src):
+    
+    adjV = sys.maxsize
+    min_val = sys.maxsize
+
+    visited[src] = 1
+    path.append((src + 1))
+
+    global cost
+
+    for k in range(20):
+
+        if (answer[src][k] != 0) and (visited[k] == 0) and answer[src][k] < min_val:
+            min_val = answer[src][k]
+            adjV = k
+
+    if min_val != sys.maxsize:
+        cost = cost + min_val
+
+    if adjV == sys.maxsize:
+        adjV = 0
+        path.append(adjV + 1)
+        cost = cost + answer[src][adjV]
+        return
+    
+    travellingsalesman(adjV)
+
+visited = np.zeros(20)
+answer = np.array(graph)
+
+travellingsalesman(0)
+print("\nShortest Path : ", path)
+print("Minimum Cost : ", cost)
+
+
+path_ = ['r0']
+for i in path:
+    path_.append('n'+str(i-1))
+path_.append('r0')
+dictionary = {"v0": {"path": path_}}
+print(dictionary)
+
+
+json_object = json.dumps(dictionary, indent=4)
+with open("level0_output.json", "w") as outfile:
+    outfile.write(json_object)
+
+# ----------------------------------------------------------
